@@ -26,10 +26,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     4,
     (index) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(
-    4,
-    (index) => FocusNode(),
-  );
+  final List<FocusNode> _focusNodes = List.generate(4, (index) => FocusNode());
 
   final _authService = AuthService();
   bool _isLoading = false;
@@ -52,12 +49,16 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     setState(() => _isLoading = true);
 
     try {
-      final isValid = await _authService.verifyOTP(widget.phoneNumber, otp);
+      final isValid = await _authService.verifyOTP(
+        widget.phoneNumber,
+        otp,
+        context,
+      );
       if (!isValid) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid OTP code')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Invalid OTP code')));
         }
         return;
       }
@@ -71,29 +72,30 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         );
         if (mounted) {
           ref.read(mainProvider.notifier).setUser(user);
-          Navigator.of(context).pushReplacementNamed('/home');
+          Navigator.of(context).pushReplacementNamed('/');
         }
       } else {
         // Login existing user
         final user = await _authService.getUserByPhone(widget.phoneNumber);
         if (user == null) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('User not found')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('User not found')));
           }
           return;
         }
         if (mounted) {
+
           ref.read(mainProvider.notifier).setUser(user);
-          Navigator.of(context).pushReplacementNamed('/home');
+          Navigator.of(context).pushReplacementNamed('/');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) {
@@ -109,7 +111,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         height: double.infinity,
 
         decoration: const BoxDecoration(
-          
           image: DecorationImage(
             image: AssetImage('assets/background.png'),
             fit: BoxFit.cover,
@@ -122,10 +123,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
-                Image.asset(
-                  'assets/logofull.png',
-                  height: 100,
-                ),
+                Image.asset('assets/logofull.png', height: 100),
                 const SizedBox(height: 40),
                 Container(
                   padding: const EdgeInsets.all(24),
@@ -198,16 +196,17 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text('Verify'),
+                          child:
+                              _isLoading
+                                  ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                  : const Text('Verify'),
                         ),
                       ),
                     ],

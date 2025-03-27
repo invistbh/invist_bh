@@ -1,4 +1,7 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:invist_bh/models/user_model.dart';
 import 'package:invist_bh/utils/validators.dart';
 import 'package:uuid/uuid.dart';
@@ -11,10 +14,11 @@ class AuthService {
 
   Future<UserModel?> getUserByPhone(String phoneNumber) async {
     final formattedNumber = Validators.formatBahrainPhoneNumber(phoneNumber);
-    final snapshot = await _firestore
-        .collection(_usersCollection)
-        .where('phoneNumber', isEqualTo: formattedNumber)
-        .get();
+    final snapshot =
+        await _firestore
+            .collection(_usersCollection)
+            .where('phoneNumber', isEqualTo: formattedNumber)
+            .get();
 
     if (snapshot.docs.isEmpty) {
       return null;
@@ -28,8 +32,9 @@ class AuthService {
   Future<String> generateAndSaveOTP(String phoneNumber) async {
     final formattedNumber = Validators.formatBahrainPhoneNumber(phoneNumber);
     // Generate a 6-digit OTP
-    final otp = (100000 + DateTime.now().millisecondsSinceEpoch % 900000).toString();
-    
+    final otp =
+        (100000 + DateTime.now().millisecondsSinceEpoch % 900000).toString();
+
     await _firestore.collection(_otpCollection).doc(formattedNumber).set({
       'otp': otp,
       'createdAt': FieldValue.serverTimestamp(),
@@ -39,9 +44,23 @@ class AuthService {
     return otp;
   }
 
-  Future<bool> verifyOTP(String phoneNumber, String otp) async {
+  Future<bool> verifyOTP(
+    String phoneNumber,
+    String otp,
+    BuildContext context,
+  ) async {
+    // For testing purposes: Accept '1234' as a valid OTP
+    if (otp == '1234') {
+      log('Using test OTP: 1234');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Using test OTP: 1234')),
+      );
+      return true;
+    }
+
     final formattedNumber = Validators.formatBahrainPhoneNumber(phoneNumber);
-    final otpDoc = await _firestore.collection(_otpCollection).doc(formattedNumber).get();
+    final otpDoc =
+        await _firestore.collection(_otpCollection).doc(formattedNumber).get();
 
     if (!otpDoc.exists) {
       return false;
@@ -49,9 +68,14 @@ class AuthService {
 
     final otpData = otpDoc.data()!;
     final storedOTP = otpData['otp'] as String;
+    log(storedOTP);
+    final storedOtp = otpData['otp'] as String;
+    log(storedOtp);
     final createdAt = (otpData['createdAt'] as Timestamp).toDate();
     final attempts = (otpData['attempts'] as int?) ?? 0;
-
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('OTP: $storedOtp')));
     // Check if OTP is expired (5 minutes)
     if (DateTime.now().difference(createdAt).inMinutes > 5) {
       await otpDoc.reference.delete();
@@ -82,7 +106,7 @@ class AuthService {
     required UserRole role,
   }) async {
     final formattedNumber = Validators.formatBahrainPhoneNumber(phoneNumber);
-    
+
     // Check if user already exists
     final existingUser = await getUserByPhone(formattedNumber);
     if (existingUser != null) {

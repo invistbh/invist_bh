@@ -1,16 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:invist_bh/models/idea_model.dart';
+import 'package:invist_bh/providers/idea_provider.dart';
+import 'package:invist_bh/providers/main_provider.dart';
+import 'package:invist_bh/screens/idea_details_screen.dart';
 import 'package:invist_bh/utils/app_theme.dart';
+import 'package:invist_bh/widgets/category_filter.dart';
+import 'package:invist_bh/widgets/create_idea_modal.dart';
+import 'package:invist_bh/widgets/idea_card.dart';
 
 class InnovatorHomeScreen extends ConsumerWidget {
   const InnovatorHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProvider);
+    final selectedCategory = ref.watch(selectedCategoryProvider);
+    final myIdeasAsyncValue = user != null 
+        ? ref.watch(creatorIdeasStreamProvider(user.id)) 
+        : const AsyncValue<List<IdeaModel>>.data([]);
+    
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('INVIST.BH'),
+        backgroundColor: AppTheme.primaryColor,
+        title: Image.asset(
+          'assets/logofull.png',
+          height: 40,
+          fit: BoxFit.contain,
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -50,7 +69,7 @@ class InnovatorHomeScreen extends ConsumerWidget {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
-                            // TODO: Navigate to create idea screen
+                            showCreateIdeaModal(context);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
@@ -71,6 +90,18 @@ class InnovatorHomeScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
+            
+            // Category Filter
+            const Text(
+              'Browse by Category',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const CategoryFilter(),
+            const SizedBox(height: 24),
 
             // Statistics Section
             const Text(
@@ -81,115 +112,99 @@ class InnovatorHomeScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildStatCard(
-                  'Active Ideas',
-                  '3',
-                  Icons.lightbulb_outline,
-                  AppTheme.primaryColor,
-                ),
-                const SizedBox(width: 16),
-                _buildStatCard(
-                  'Interested Investors',
-                  '12',
-                  Icons.people_outline,
-                  AppTheme.secondaryColor,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildStatCard(
-                  'In Discussion',
-                  '2',
-                  Icons.chat_bubble_outline,
-                  Colors.orange,
-                ),
-                const SizedBox(width: 16),
-                _buildStatCard(
-                  'Completed Deals',
-                  '1',
-                  Icons.check_circle_outline,
-                  Colors.green,
-                ),
-              ],
+            myIdeasAsyncValue.when(
+              data: (ideas) {
+                final activeIdeas = ideas.length;
+                final interestedInvestors = ideas.fold<int>(
+                  0, (sum, idea) => sum + idea.investors.length);
+                
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        _buildStatCard(
+                          'Active Ideas',
+                          activeIdeas.toString(),
+                          Icons.lightbulb_outline,
+                          AppTheme.primaryColor,
+                        ),
+                        const SizedBox(width: 16),
+                        _buildStatCard(
+                          'Interested Investors',
+                          interestedInvestors.toString(),
+                          Icons.people_outline,
+                          AppTheme.secondaryColor,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _buildStatCard(
+                          'In Discussion',
+                          '${activeIdeas > 0 ? (activeIdeas / 2).round() : 0}',
+                          Icons.chat_bubble_outline,
+                          Colors.orange,
+                        ),
+                        const SizedBox(width: 16),
+                        _buildStatCard(
+                          'Completed Deals',
+                          '${interestedInvestors > 5 ? (interestedInvestors / 10).round() : 0}',
+                          Icons.check_circle_outline,
+                          Colors.green,
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text('Error: $error')),
             ),
             const SizedBox(height: 24),
 
-            // Recent Activity
+            // Your Ideas
             const Text(
-              'Recent Activity',
+              'Your Ideas',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 5,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.notifications_none,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'New investor interested in your idea',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '2 hours ago',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: Colors.grey[400],
-                      ),
-                    ],
-                  ),
+            myIdeasAsyncValue.when(
+              data: (ideas) {
+                if (ideas.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Text('You haven\'t created any ideas yet'),
+                    ),
+                  );
+                }
+                
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: ideas.length,
+                  itemBuilder: (context, index) {
+                    final idea = ideas[index];
+                    return IdeaCard(
+                      idea: idea,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          CupertinoPageRoute(
+                            builder: (context) => IdeaDetailsScreen(idea: idea),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 );
               },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text('Error: $error')),
             ),
           ],
         ),

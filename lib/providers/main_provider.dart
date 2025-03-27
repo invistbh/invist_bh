@@ -41,8 +41,21 @@ class MainProvider extends StateNotifier<MainProviderState> {
   }
 
   Future<void> getIfUserLoggedIn() async {
-    // TODO: Implement user authentication check
-    state = state.copyWith(isUserLoggedIn: false, isLoading: false);
+    try {
+      // Check if we already have a user in the state
+      if (state.currentUser != null) {
+        state = state.copyWith(isUserLoggedIn: true, isLoading: false);
+        return;
+      }
+      
+      // TODO: Implement proper persistence (e.g., SharedPreferences or secure storage)
+      // For now, we'll just set isLoading to false without changing isUserLoggedIn
+      // This prevents overriding the login state if the user has just logged in
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      // In case of any error, set isLoading to false but don't change login state
+      state = state.copyWith(isLoading: false);
+    }
   }
 
   void setUser(UserModel? user) {
@@ -65,3 +78,10 @@ final mainProvider =
     StateNotifierProvider<MainProvider, MainProviderState>((ref) {
   return MainProvider();
 });
+
+// Provider to access the current user
+final userProvider = Provider<UserModel?>((ref) {
+  final mainState = ref.watch(mainProvider);
+  return mainState.currentUser;
+});
+
